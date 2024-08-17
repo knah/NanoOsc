@@ -36,23 +36,54 @@ public sealed class OscSocket : IDisposable
         ReaderTask = SocketLoop();
     }
 
-    public ValueTask<int> Send(ReadOnlyMemory<byte> data, IPEndPoint? remote = null)
+    public 
+        #if NETSTANDARD2_0
+        Task<int>
+        #else
+        ValueTask<int>
+        #endif
+        Send(ReadOnlyMemory<byte> data, IPEndPoint? remote = null)
     {
         remote ??= RemoteAddress;
         if (remote == null) throw new ArgumentNullException(nameof(remote), "Must specify remote address for simple send operation!");
+        #if NETSTANDARD2_0
+        var arrayPool = ArrayPool<byte>.Shared;
+        var buffer = arrayPool.Rent(data.Length);
+        try
+        {
+            data.CopyTo(buffer);
+            return mySocket.SendToAsync(new ArraySegment<byte>(buffer, 0, data.Length), SocketFlags.None, remote);
+        }
+        finally
+        {
+            arrayPool.Return(buffer);
+        }
+#else
         return mySocket.SendToAsync(data, remote, myCancellationToken);
+        #endif
     }
 
     private async Task SocketLoop()
     {
-        using var bufferOwner = MemoryPool<byte>.Shared.Rent(65536);
-        var buffer = bufferOwner.Memory;
-        while (!myCancellationToken.IsCancellationRequested)
+        var arrayPool = ArrayPool<byte>.Shared;
+        var buffer = arrayPool.Rent(65536);
+        try
         {
-            var receiveResult = await mySocket.ReceiveMessageFromAsync(buffer, myReceiveRemote, myCancellationToken);
-            var bytes = receiveResult.ReceivedBytes;
-            if (receiveResult.RemoteEndPoint is not IPEndPoint source) continue;
-            DispatchPacket(buffer.Span[..bytes], source);
+            while (!myCancellationToken.IsCancellationRequested)
+            {
+                #if NETSTANDARD2_0
+                var receiveResult = await mySocket.ReceiveMessageFromAsync(new ArraySegment<byte>(buffer), SocketFlags.None, myReceiveRemote);
+                #else
+                var receiveResult = await mySocket.ReceiveMessageFromAsync(buffer, myReceiveRemote, myCancellationToken);
+                #endif
+                var bytes = receiveResult.ReceivedBytes;
+                if (receiveResult.RemoteEndPoint is not IPEndPoint source) continue;
+                DispatchPacket(buffer.AsSpan(0, bytes), source);
+            }
+        }
+        finally
+        {
+            arrayPool.Return(buffer);
         }
     }
 

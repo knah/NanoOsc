@@ -27,8 +27,15 @@ public ref struct OscMessageBuilder
     public void Write(float f)
     {
         PushArgumentType(OscType.Float);
-        BinaryPrimitives.WriteSingleBigEndian(myBuffer[myOffset..], f);
+        FrameworkCompat.WriteSingleBigEndian(myBuffer[myOffset..], f);
         myOffset += 4;
+    }
+    
+    public void Write(double d)
+    {
+        PushArgumentType(OscType.Double);
+        FrameworkCompat.WriteDoubleBigEndian(myBuffer[myOffset..], d);
+        myOffset += 8;
     }
     
     public void Write(int i)
@@ -41,7 +48,7 @@ public ref struct OscMessageBuilder
     public void Write(ReadOnlySpan<byte> data)
     {
         PushArgumentType(OscType.Blob);
-        BinaryPrimitives.WriteSingleBigEndian(myBuffer[myOffset..], data.Length);
+        BinaryPrimitives.WriteInt32BigEndian(myBuffer[myOffset..], data.Length);
         myOffset += 4;
         data.CopyTo(myBuffer[myOffset..]);
         myOffset += data.Length;
@@ -102,7 +109,7 @@ public ref struct OscMessageBuilder
         if (!address.StartsWith('/'))
             throw new ArgumentException("Address must start with a forward slash /");
 
-        var position = Encoding.UTF8.GetBytes(address, target);
+        var position = Encoding.UTF8.GetBytes(address.AsSpan(), target);
         
         target[position++] = 0;
         while (position % 4 != 0)

@@ -127,7 +127,7 @@ public ref struct OscMessageParser
         if (PeekNextType() != typeof(float))
             throw new OscException($"Next type is {PeekNextType()}, not float!");
 
-        var result = BinaryPrimitives.ReadSingleBigEndian(myOscPacket.Slice(myCurrentInBodyOffset, 4));
+        var result = FrameworkCompat.ReadSingleBigEndian(myOscPacket.Slice(myCurrentInBodyOffset, 4));
 
         myCurrentTypeOffset++;
         myCurrentInBodyOffset += 4;
@@ -140,7 +140,7 @@ public ref struct OscMessageParser
         if (PeekNextType() != typeof(double))
             throw new OscException($"Next type is {PeekNextType()}, not double!");
 
-        var result = BinaryPrimitives.ReadDoubleBigEndian(myOscPacket.Slice(myCurrentInBodyOffset, 8));
+        var result = FrameworkCompat.ReadDoubleBigEndian(myOscPacket.Slice(myCurrentInBodyOffset, 8));
 
         myCurrentTypeOffset++;
         myCurrentInBodyOffset += 8;
