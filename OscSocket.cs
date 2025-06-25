@@ -72,9 +72,9 @@ public sealed class OscSocket : IDisposable
             while (!myCancellationToken.IsCancellationRequested)
             {
                 #if NETSTANDARD2_0
-                var receiveResult = await mySocket.ReceiveMessageFromAsync(new ArraySegment<byte>(buffer), SocketFlags.None, myReceiveRemote);
+                var receiveResult = await mySocket.ReceiveMessageFromAsync(new ArraySegment<byte>(buffer), SocketFlags.None, myReceiveRemote).ConfigureAwait(false);
                 #else
-                var receiveResult = await mySocket.ReceiveMessageFromAsync(buffer, myReceiveRemote, myCancellationToken);
+                var receiveResult = await mySocket.ReceiveMessageFromAsync(buffer, myReceiveRemote, myCancellationToken).ConfigureAwait(false);
                 #endif
                 var bytes = receiveResult.ReceivedBytes;
                 if (receiveResult.RemoteEndPoint is not IPEndPoint source) continue;
